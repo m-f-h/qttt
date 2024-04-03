@@ -8,16 +8,16 @@
 
     Ref.: https://en.wikipedia.org/wiki/Quantum_tic-tac-toe
 """
-__version__ = 1.240402
+__version__ = "1.240402"
 __author__ = "M. F. Hasler"
 __copyright__ = "Copyright 2024 by M. F. Hasler"
 
 class Move(dict):
     """A dict whose entry 'squares' gives a 2-tuple (square1, square2) with the
-    two squares (e.g., "a1","b2") on which the quantum particle is to be placed
+    two squares (e.g., "a1","b2") on which the quantum piece is to be placed
     on the board. 
     Upon initialisation (see Move.__init__ for signature), it MAY have entries:
-    'squares' (str, str): 2-tuple of the squares on which the qPiece is placed
+    'squares' (str, str): 2-tuple of the squares on which the Piece is placed
     'board' (Board): the board on which this move is considered
             (allows to check for legal coordinates and "entanglement")
     'pending' (bool): move requires a decision to be made by the next player
@@ -74,7 +74,7 @@ class Move(dict):
             self['squares'] = (move[:2+move[2].isdigit()],
                                move[-2-move[-2].isdigit():])
             
-        # by now, self[squares] should be of type tuple or list
+        # by now, self['squares'] should be of type tuple or list
         if len(self['squares']) != 2:
             raise ValueError(f"Expected exactly 2 squares, got {self['squares']}")
 
@@ -87,8 +87,8 @@ class Move(dict):
         # if a board was given, check whether coordinates are legal
         if board := self.get('board'):
             if not all(map(board.is_valid_square, self['squares'])):
-                raise ValueError(f"Coordinates {self['squares']} out of range,"
-                                 f" must be in {{{cols}}} x {rows}")
+                raise ValueError(f"Coordinates {self['squares']} out of range")
+                #                f" must be in {{{board.cols}}} x {board.rows}")
             if board.debug > 3:
                 print(f"OK - {repr(self)} is initialized.")
 
@@ -147,12 +147,12 @@ Attributes:
         getattr(self,key) # mainly winner, score
         
     def __init__(self, *args, **kwargs):
-        "Initialize a quantum tic tac toe board. (kw)args include: size, other info/board to copy."
+        "Initialize a quantum tic-tac-toe board. (kw)args include: size, other info/board to copy."
         for arg in args:
             if isinstance(arg, int):
-                if 'size'in kwargs:
-                    raise ValueError(f"Got integer argument '{arg}' but "
-                                     f"size = {kwargs['size']} was already defined.")
+                if 'size' in kwargs:
+                    raise ValueError(f"Got integer argument '{arg}' but size ="
+                                     f" {kwargs['size']} was already defined.")
                 kwargs['size']=arg
             elif isinstance(arg, dict): kwargs |= arg
             else:
@@ -175,9 +175,10 @@ Attributes:
         return self._cols
     @property
     def rows(self):
-        """Tuple ('1','2','3',...) of valid row specifiers (may exceed '9' !)."""
+        """Tuple ('1','2','3',...) of valid row specifiers (may exceed '9'!)."""
         if not hasattr(self,'_rows'):
             self._rows = tuple(map(str, range(1, self.size+1)))
+            #self._rows = [str(i+1)for i in range(self.size)]
         return self._rows
     @property
     def squares(self):
@@ -185,8 +186,8 @@ Attributes:
         top left to bottom right, i.e., a3, b3, c3; a2, b2, c2; a1, b1, c1
         (or similar for larger boards)."""
         if not hasattr(self,'_squares'):
-            N = self.size ; cols = self.cols
-            self._squares = [col+str(row) for row in range(N,0,-1) for col in cols]
+            self._squares = [col+row for row in self.rows[::-1]
+                                     for col in self.cols]
         return self._squares
     def is_valid_square(self, s: str):
         """Whether 's' is a valid square specifier, i.e., between 'a1' and 'z#',
@@ -209,7 +210,7 @@ Attributes:
         return self.symbols[s<0] if (s:=self.score) else'-'if s==0 else None
     @property
     def score(self):
-        """None if game not over, 0 if draw, > 0 or < 0 if 'X' or 'O' has won."""
+        """None if game not over, 0 if draw, > 0 or < 0 if 1st or 2nd player has won."""
         if self.get('score', False) is False:
             self['score'] = self.compute_score()
         return self['score']
@@ -255,21 +256,21 @@ Attributes:
                 print(f"{self.MPPS}: set to {self[self.MPPS]}")
         return self[self.MPPS]
     
-    def __str__(self):
+    def __str__(self) -> str:
+        """Return str(self)."""
         # each piece uses 2 characters + inter-piece space ("X1 X2", ...)
-        self.cell_width = self.row_height * 3 - 1
-        row_separator = "\n" + ('-' * self.cell_width
-                                ) . join('+' * (self.size+1)) + "\n"
+        self.cell_width = self.row_height * 3 - 1 # subsequent functions use this
+        bar = '-' * self.cell_width
+        row_separator = "\n" + bar . join('+' * (self.size+1)) + "\n"
         return row_separator . join(self . text_rows())
 
     def text_rows(self):
-            """Generate the sequence of rows for ASCII display of board.
+            """Generate the sequence of text rows for a 2D character display of self.
             First and last row give information about the current status of the game.
             These and the intermediate rows of the board are separated by a row_separator.
-            The rows of the board, each of which corresponds to several rows of text,
-            are first computed as whole, and then 'sent' text-row by text-row, to yield a
-            result of the form:
-                Board after move 0:
+            Each row of the board corresponds to self.row_height rows of text, which
+            are concatenated and sent as whole, to yield a result of the form:
+              " Board after move 0:
                 +--+--+--+
                 |  |  |  |
                 +--+--+--+
@@ -277,7 +278,7 @@ Attributes:
                 +--+--+--+
                 |  |  |  |
                 +--+--+--+
-                Player 'X' to play.
+                Player 'X' to play. "
             """
             yield f"Board after move {len(self.moves)}: (score: {self.score})"
             cols = self.cols ; row_height = self.row_height
@@ -291,20 +292,19 @@ Attributes:
                                 for i in range(row_height))
             # now the last 2 rows: labels of columns, and status line (player to move...)
             yield ''.join(" "+c.center(self.cell_width) for c in cols) + '\n' + self.status()
-    def status(self) -> (str,None):
-        """Game status: drawn / decision awaited / 'X'/'O' to play/has won/lost."""
+    def cell(self, square) -> list:
+            """Return a list of 'row_height' strings which represent the pieces on square."""
+            nr = self.row_height ; c = [''] * nr ; r = nr//2 # start in the middle
+            for piece in self[square]:
+                c[r] += " " + piece if c[r] else piece
+                r = (r+1) % nr
+            return c
+    def status(self) -> str:
+        """Return string describing the game status (drawn, decision awaited, who to play/has won/lost)."""
         return "The game is drawn." if self.score==0 else f"Player '{self.turn}' " + (
                 f"must decide about {self.moves[-1]['piece']}: {' or '.join(self.pending)} ?"
                 if self.pending else "to play." if self.score is None
                 else f"has {'won'if self.winner==self.turn else'lost'}.")
-    def cell(self, square):
-            """Return a list of 'row_height' strings which "equally" distribute
-            the items in cell(r,c)."""
-            nr = self.row_height ; c = [''] * nr ; r = nr//2 # start in the middle
-            for piece in self[square]:
-                c[r] += " "+piece if c[r] else piece
-                r = (r+1) % nr
-            return c
 
     def is_classical(self, square) -> bool:
         """True iff this square is occupied by a classical piece."""
@@ -324,6 +324,7 @@ Attributes:
 
     def push(self, move: (str,tuple,Move)):
         """Make a move (= place a quantum piece on two squares) or decision."""
+        
         if self.pending: # is a decision pending? (then move = choice)
             return self.decide(move)
 
@@ -362,11 +363,11 @@ Attributes:
         'X'/'O'+(move number) - To do: better manage (un)used numbers."""
         m = len(self.moves)
         #self.used_pieces |= {piece_name}
-        return self.symbols[m&1]+str(m//2+1)
+        return self.symbols[m&1] + str(m//2+1)
         
     def decide(self, choice):
         if choice not in self.pending:
-            raise Exception("No decision awaited/possible.")if not self.pending\
+            raise Exception("No decision awaited/possible.") if not self.pending\
                 else ValueError(f"Incorrect decision: must be one of {self.pending}.")
         self.backup_current_state() # for undo()
         piece = self.moves[-1]['piece']
@@ -384,13 +385,14 @@ Attributes:
             raise Exception("Error: no backup information available for undo()")
         self.clear()
         self |= self.backups.pop()
-        if self.debug and not self.pending:
-            print("***WARNING: after restore_backup, position is not pending:\n",
-                  repr(self))
+        assert not self.pending
+        #if debug>2: print("***WARNING: after restore_backup, "
+        #        "position is not pending:\n", repr(self))
 
     def make_classical(self, square, piece):
         """Reduce 'piece' on 'square' to classical state and recursively "push"
         the other pieces here to collapse on their respective 'other' square."""
+        
         if piece not in self[square]:
             # piece was queued for removal but has already been removed
             if self.debug > 3:
@@ -398,24 +400,22 @@ Attributes:
             return
         self.used_pieces -= {piece}     # "free" this piece label
         
-        # to make recursion more efficient and avoid loops, we remove all pieces
+        # To make recursion more efficient and avoid loops, we remove all pieces
         # on this square and keep their list separately, before going recursive.
         pieces = self[square]
         self[square] = {Piece(piece[0])} # first letter (i.e., X or O) only
         for p in pieces:
-            # all of the pieces on this square should be quantum pieces,
+            # All of the pieces on this square should be quantum pieces,
             # although the partner of some of them might already have disappeared
             if p != piece:
-                #assert hasattr(p,'other') # always true - only qPieces here.
-                self.make_classical(p.other, p)
+                #assert hasattr(p,'other') # always True: only quantum pieces here
+                self.make_classical(p.other, p) # implies the above assert
     
     def undo(self, number_of_moves: int = 1):
-        "Undo the given number of moves or 'decisions'."
+        """Undo the given number of moves or 'decisions'."""
         while number_of_moves > 0:
             if not self.moves:
                 raise Exception("Error: no move to undo!")
-
-            number_of_moves -= 1    # decrease # moves to undo
 
             # Must we rather undo a decision? This is the case when the last
             # move did require one, but not the board, i.e., it's already made.
@@ -428,10 +428,13 @@ Attributes:
                 if 'pending' in move:
                     del self['pending']
                 self.pop(self.MPPS,0)
+
+            number_of_moves -= 1    # one less remaining to undo
         #end undo
+
     def help(self, choice):
-        if choice and choice[0]in'Rr':
-            print("""Welcome to QuTTT : Quanum Tic Tac Toe.
+        if choice and choice[0] in'Rr':
+            print("""Welcome to QTTT : Quanum Tic-Tac-Toe.
 Players 'X' and 'O' take turns to play a move.
 A move consists in choosing *two* squares on which you put your quantum piece (X or O).
 You can enter "a1,b2" or similar (instead of "," there can be anything or nothing).
@@ -462,19 +465,19 @@ then the game is drawn.""")
             if queue:
                 print("Choice is", move := queue.pop(0))
             else:
-                move = input("What is the choice ('?' for help): ").strip()
+                move = input("What is the choice ('?' for help): ")
             move = move.strip().lower()
-            if not move or move[0]in'?r':
+            if not move or move[0] in'?r':
                     self.help(move); continue
             if move[0]=='u':
                     self.undo(); continue
             if move[0] in 'qx' or move=="exit":
                     move=input("Are you sure you want to quit? ")
-                    if move and move[0].upper()!='N': break
+                    if move and move[0].upper() != 'N': break
                     continue
             try:
                 if self.debug>5:
-                    print(f"try push({move}): mpps={self.get('max_pieces_per_square','undef')}")
+                    print(f"try push({move}): mpps={self.get(self.MPPS,'undef')}")
                 self.push(move)
                 if self.debug>4: print("OK - play({move}) done.")
             except ValueError as E:
@@ -491,8 +494,8 @@ class Piece(str):
     -- in a graphical implementation one might not need the numerical index).
 (Possible) attributes:
     other: label of the *other* square on which this quantum piece is (also/
-        possibly) located. No 'other' <=> classical piece <=> len(self)==1."""
-
+        possibly) located. No 'other' <=> classical piece <=> len(self)==1.
+    """
     @property
     def is_classical(self):
         """Return whether this a classical piece, located on only ONE well defined square."""
@@ -502,7 +505,7 @@ class Piece(str):
 if __name__=='__main__':
     print("""Welcome to Quantum Tic-Tac-Toe!
     In this example game, the first 4 moves are pre-programmed.
-    If you want to exit this example game, just enter 'x', or '?' for help.""")
+    Enter '?' for help, 'r' for rules, 'x' to exit this example game.""")
     ttt = Board(debug=2)
     ttt.play(queue = ["a1-b2",'a3b3','b2b3','a1a3'])
 
