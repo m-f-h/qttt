@@ -2,19 +2,22 @@
 
 Mini-game "quantum tic-tac-toe": see [Wikipedia](https://en.wikipedia.org/wiki/Quantum_tic-tac-toe)
 
-Provides the main class `Board`, and misc classes `Move` and `Square`, both rather for internal use.
+Provides the main `class Board(dict)`, and misc `class Move(dict)` and `class Square(str)`, 
+both rather for internal use and mainly to encapsulate the related methods/attributes/checks.
 
 A `Board` can be initialized to an arbitrary `size` (= # rows = # columns) which by default equals 3. 
 Currently only a square board is implemented, but one might consider `size = (m,n)` for rectangular boards,
 in which case I think a row of min(m,n) same pieces aligned in the same direction should win.
 
-A `Board` has the interactive method `play()` providing a text interface that displays 
-the board (through `str(self)`) and invites the players to enter their move (e.g., "a1,c3") 
+A `Board` has the interactive method `play()` providing a text interface with 2D display of 
+the board (through `self.__str__`) and inviting the players to enter their move (e.g., "a1,c3") 
 or decision (e.g., "a1") or ask for help about the rules or other possible commands like
 "undo" a move or decision, show the rules, exit the game etc.
 
 These actions use the more elementary methods `push(move: str)` to make a move (or decision),
-`undo(number_of_moves: int = 1)`, `help(choice: str = '')`.
+`undo(number_of_moves: int = 1)`, `help(choice: str = '')`. There are also many attributes 
+including `winner`, `score`, `is_game_over`, `turn`, `symbols`, `cols` (the valid letters), 
+`rows` (numerical labels), `groups` (generator of the diagonals, rows and columns), ...
 
 It is sufficient to enter `Board().play()` to play a game on a standard sized board,
 or `Board(4).play()` to play on a 4x4 board, etc.
