@@ -434,7 +434,7 @@ Attributes:
 
     def help(self, choice):
         if choice and choice[0] in'Rr':
-            print("""Welcome to QTTT : Quanum Tic-Tac-Toe.
+            print("""Welcome to QTTT : Quanutm Tic-Tac-Toe.
 Players 'X' and 'O' take turns to play a move.
 A move consists in choosing *two* squares on which you put your quantum piece (X or O).
 You can enter "a1,b2" or similar (instead of "," there can be anything or nothing).
